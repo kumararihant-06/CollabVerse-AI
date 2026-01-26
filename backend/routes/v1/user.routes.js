@@ -18,6 +18,7 @@ v1router.get("/profile",
                 profileUserController)
 
 v1router.post("/logout",
+                authMiddleware,
                 logoutUserController)                
 
 
