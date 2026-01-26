@@ -18,3 +18,21 @@ export const createUserService = async ({ email, password }) => {
      throw new Error("User already exists.")
   }
 };
+
+export const loginUserService = async ({email, password}) =>{
+  if(!email || !password){
+    console.log("Invalid credentials.")
+    throw new Error ("Invalid credentials.")
+  }
+  const user = await User.findOne({email}).select('+password')
+  if(!user){
+    console.log("User not found.")
+    throw new Error("User with this email doesn't exists.")
+  }
+  const isMatch = await user.isValidPassword(password)
+  if(!isMatch){
+    console.log("Incorrect passowrd.")
+    throw new Error("Incorrect Password.")
+  }
+  return user
+}
