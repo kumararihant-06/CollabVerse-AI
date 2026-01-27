@@ -1,7 +1,7 @@
 import User from "../models/user.models.js";
 
-export const createUserService = async ({ email, password }) => {
-  if (!email || !password) {
+export const createUserService = async ({ username, email, password }) => {
+  if (!username || !email || !password) {
     console.log("Invalid details, User creation failed");
     throw new Error("Email and password are required for user creation.");
   }
@@ -9,6 +9,7 @@ export const createUserService = async ({ email, password }) => {
   if (!existingUser) {
     const hashedPassword = await User.hashPassword(password);
     const user = await User.create({
+      username,
       email,
       password: hashedPassword,
     });
