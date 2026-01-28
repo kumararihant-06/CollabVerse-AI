@@ -1,7 +1,8 @@
 import {Router} from 'express';
 import {body} from 'express-validator';
-import { createProjectController } from '../../controllers/project.controllers.js';
+import { createProjectController, getAllProjectsController } from '../../controllers/project.controllers.js';
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
+import { get } from 'mongoose';
 
 const v1ProjectRouter = Router();
 
@@ -11,5 +12,9 @@ v1ProjectRouter.post('/create',
                       createProjectController
                     )
           
+v1ProjectRouter.get('/all-projects',
+                      authMiddleware,
+                      getAllProjectsController
+                    )
                     
 export default v1ProjectRouter

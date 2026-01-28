@@ -10,11 +10,35 @@ export const createProjectService = async ({
     if(!userId){
         throw new Error("User ID is required.")
     }
-
-    const project  = await Project.create({
+    
+    try {
+       const project = await Project.create({
         name: projectName,
         users: [userId]
     })
+        return project;
+    } catch (error) {
+        if(error.code === 11000){
+            throw new Error("Project name must be unique.")
+        }
+        throw error;
+    }
+    
+    
+}
 
-    return project
+export const getAllProjectsService = async ({userId}) => {
+    if(!userId){
+        throw new Error("User ID is required.")
+    }
+
+    try {
+        const projects = await Project.find({
+            users: userId
+        })
+
+        return projects;
+    } catch (error) {
+        
+    }
 }
