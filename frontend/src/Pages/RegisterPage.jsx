@@ -1,6 +1,26 @@
-import { Link } from "react-router-dom";
-
+import { Link, useNavigate } from "react-router-dom";
+import axios from "../config/axios.js";
+import { useState } from "react";
 export default function RegisterPage() {
+  const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const submitHandler = async (e) =>{
+    e.preventDefault();
+    try {
+      const response = await axios.post("/user/register",({
+        username,
+        email,
+        password
+      }));
+        console.log("Registration successful", response.data);
+        navigate("/login");
+    } catch (error) {
+      console.log("Error during registration.", error)
+    }
+  }
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b0616] via-[#1a0b2e] to-[#2b0f45] px-4">
       <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-8 text-white">
@@ -10,11 +30,12 @@ export default function RegisterPage() {
           Sign up to get started
         </p>
 
-        <form className="space-y-5">
+        <form onSubmit={submitHandler} className="space-y-5">
           
           <div>
             <label className="block text-sm text-gray-300 mb-1">Full Name</label>
             <input
+              onChange={e => {setUsername(e.target.value)}}
               type="text"
               placeholder="Username"
               className="w-full px-4 py-2.5 rounded-xl bg-black/30 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -24,6 +45,7 @@ export default function RegisterPage() {
           <div>
             <label className="block text-sm text-gray-300 mb-1">Email</label>
             <input
+              onChange={e => {setEmail(e.target.value)}}
               type="email"
               placeholder="you@example.com"
               className="w-full px-4 py-2.5 rounded-xl bg-black/30 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -33,6 +55,7 @@ export default function RegisterPage() {
           <div>
             <label className="block text-sm text-gray-300 mb-1">Password</label>
             <input
+              onChange={e => {setPassword(e.target.value)}}
               type="password"
               placeholder="••••••••"
               className="w-full px-4 py-2.5 rounded-xl bg-black/30 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500"
