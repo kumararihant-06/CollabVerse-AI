@@ -1,11 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
 import axios from "../config/axios.js";
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { UserContext } from "../context/User.context.jsx"; 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const {setUser} = useContext(UserContext);
 
   const submitHandler = async (e) =>{
     e.preventDefault();
@@ -16,7 +18,9 @@ export default function RegisterPage() {
         password
       }));
         console.log("Registration successful", response.data);
-        navigate("/login");
+        localStorage.setItem('token', response.data.token);
+        setUser(response.data.user)
+        navigate("/dashboard");
     } catch (error) {
       console.log("Error during registration.", error)
     }

@@ -1,9 +1,15 @@
 import React from 'react'
 import AppRoutes from './Routes/AppRoutes'
-
+import { UserProvider} from './context/User.context.jsx'
+import { User } from 'lucide-react'
 const App = () => {
   return (
-    <div><AppRoutes/></div>
+    
+      <UserProvider>
+        <div><AppRoutes/></div>
+      </UserProvider>
+    
+    
   )
 }
 

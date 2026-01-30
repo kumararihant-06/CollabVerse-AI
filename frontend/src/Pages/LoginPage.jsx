@@ -1,11 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
 import axios from "../config/axios.js";
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { UserContext } from "../context/User.context.jsx";
 export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const {setUser} = useContext(UserContext);
   const submitHandler = async (e) =>{
     e.preventDefault()
     try {
@@ -14,6 +16,10 @@ export default function LoginPage() {
         password
       }));
         console.log("Login Successful", response.data);
+        localStorage.setItem('token', response.data.token);
+        axios.defaults.headers.common["Authorization"] =
+        `Bearer ${response.data.token}`;
+        setUser(response.data.user)
         navigate("/dashboard");
     } catch (error) {
       console.log("Error during login:", error);
