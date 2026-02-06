@@ -23,17 +23,51 @@ export default function DashboardPage() {
                 }
             }
         )
-        setProjects((prev) => [newProject.data.project, ...prev]);
+        setProjects((prev) => [...prev, newProject.data.project]);
         } catch (error) {
             console.log("Error creating project: ", error.response?.data || error.message )
             alert("Failed to create project. Please try again.")
         }
     };
 
+    const fetchProjects = async () => {
+       try {
+         const token = localStorage.getItem("token");
+         const response = await axios.get("/project/all-projects",
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+         )
+         setProjects(response.data.projects);
+       } catch (error) {
+        console.log("Error fetching projects: ", error.response?.data || error.message)
+        alert("Failed to fetch projects. Please refresh the page.")
+       }
+        
+    }
+
+    const handleProfileClick = async () => {
+        const token = localStorage.getItem("token")
+        try {
+            await axios.get("/user/profile",{
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        navigate("/profile");
+        } catch (error) {
+            localStorage.removeItem("token");
+            navigate("/login")
+        }
+    }
+
     useEffect(() => {
     if(!user && !loading){
         navigate("/login");
     }
+    fetchProjects();
     },[user,loading, navigate]);
 
     useEffect(() => {
@@ -51,17 +85,27 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#0b0616] via-[#1a0b2e] to-[#2b0f45] text-white px-6 py-10">
 
       {/* Header */}
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-semibold">
+      <header className="max-w-7xl mx-auto flex justify-between items-center">
+        <div>
+            <h1 className="text-3xl font-semibold">
           {greeting}, <span className="text-purple-400">{user?.username}</span> 👋
         </h1>
         <p className="text-gray-400 mt-1">
           Let’s build something amazing today.
         </p>
-      </div>
+        </div>
+        <div>
+            <button
+            onClick={handleProfileClick}
+            className= "w-12 h-12 rounded-full bg-purple-600 font-semibold flex items-center justify-center hover:scale-105 transition hover:cursor-pointer ">
+                {user?.username?.charAt(0).toUpperCase()}
+            </button>
+        </div>
+
+      </header>
 
       {/* Projects Section */}
-      <div className="max-w-7xl mx-auto mt-12">
+      <section className="max-w-7xl mx-auto mt-12">
 
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold">Your Projects</h2>
@@ -88,6 +132,7 @@ export default function DashboardPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
               <div
+                onClick={() => {navigate(`/project/${project._id}`)}}
                 key={project.id}
                 className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-6 hover:border-purple-500/40 transition cursor-pointer"
               >
@@ -95,7 +140,9 @@ export default function DashboardPage() {
                   {project.name}
                 </h3>
                 <p className="text-gray-400 text-sm mb-4">
-                  {project.description}
+                    {project.users?.length || 0} {" "}
+                    {(project.users?.length || 0) === 1 ? "Collaborator" : "Collaborators"}
+                  
                 </p>
                 
               </div>
@@ -103,7 +150,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-      </div>
+      </section>
       <CreateProjectModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
