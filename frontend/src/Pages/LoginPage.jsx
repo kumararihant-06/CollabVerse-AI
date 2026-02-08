@@ -2,6 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "../config/axios.js";
 import { useState, useContext } from "react";
 import { UserContext } from "../context/User.context.jsx";
+import { connectSocket } from "../config/socket.js";
+
 export default function LoginPage() {
 
   const [email, setEmail] = useState("");
@@ -17,8 +19,7 @@ export default function LoginPage() {
       }));
         console.log("Login Successful", response.data);
         localStorage.setItem('token', response.data.token);
-        axios.defaults.headers.common["Authorization"] =
-        `Bearer ${response.data.token}`;
+        connectSocket();
         setUser(response.data.user)
         navigate("/dashboard");
     } catch (error) {

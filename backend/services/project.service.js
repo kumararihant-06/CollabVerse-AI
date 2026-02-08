@@ -98,9 +98,10 @@ export const getProjectByIdService = async ({projectId}) =>{
         throw new Error("Invalid Project ID.")
     }
 
+    // populate user references with basic fields (username, email)
     const project  = await Project.findOne({
         _id: projectId
-    })
+    }).populate('users', 'username email')
 
     if(!project){
         throw new Error("Project not found.")

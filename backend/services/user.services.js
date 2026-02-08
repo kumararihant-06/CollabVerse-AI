@@ -37,3 +37,15 @@ export const loginUserService = async ({email, password}) =>{
   }
   return user
 }
+
+export const getUserInfoService = async ({email}) => {
+  if(!email){
+    throw new Error ("email is required.");
+  }
+
+  const user = await User.findOne({email}).select('email username _id');
+  if(!user){
+    throw new Error("User not found.")
+  }
+  return user
+}

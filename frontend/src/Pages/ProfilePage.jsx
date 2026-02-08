@@ -2,7 +2,7 @@ import {useContext} from "react";
 import { UserContext } from "../context/User.context";
 import { useNavigate } from 'react-router-dom';
 import axios from '../config/axios.js';
-import React from 'react'
+import { disconnectSocket } from "../config/socket.js";
 
 const ProfilePage = () => {
 
@@ -17,6 +17,7 @@ const ProfilePage = () => {
                     Authorization: `Bearer ${token}`
                 }
             });
+            disconnectSocket();
             navigate("/login");
             setUser(null);
             localStorage.removeItem("token");

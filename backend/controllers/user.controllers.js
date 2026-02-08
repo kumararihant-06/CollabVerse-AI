@@ -1,5 +1,5 @@
 import User from "../models/user.models.js";
-import { createUserService, loginUserService } from "../services/index.js";
+import { createUserService, getUserInfoService, loginUserService } from "../services/index.js";
 import {validationResult } from 'express-validator';
 import redisClient from "../services/redis.service.js";
 
@@ -89,6 +89,32 @@ export const logoutUserController = async (req, res) => {
         res.status(400).json({
             success: false,
             message: "Error occurred while Logging out."
+        })
+    }
+}
+
+export const getUserInfoController = async (req, res) => {
+    const errors = validationResult(req);
+
+    if(!errors.isEmpty()){
+        return res.status(400).json({
+            errors: errors.array()
+        })
+    }
+
+    try {
+        const {email} = req.body;
+        const user = await getUserInfoService({email});
+        return res.status(200).json({
+            success: true,
+            message: "User info fetched successfully.",
+            user
+        })
+    } catch (error) {
+        console.log("Error fetching user info: ", error.message)
+        return res.status(500).json({
+            success: false,
+            message: "Error fetching user info."
         })
     }
 }

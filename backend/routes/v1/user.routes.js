@@ -1,7 +1,8 @@
 import {Router} from 'express';
-import { createUserController, loginUserController, logoutUserController, profileUserController } from '../../controllers/user.controllers.js';
+import { createUserController, getUserInfoController, loginUserController, logoutUserController, profileUserController } from '../../controllers/user.controllers.js';
 import {body} from 'express-validator'
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
+import { get } from 'mongoose';
 const v1UserRouter = Router();
 
 v1UserRouter.post("/register",
@@ -21,6 +22,11 @@ v1UserRouter.post("/logout",
                 authMiddleware,
                 logoutUserController)                
 
+v1UserRouter.post("/user-info",
+                 body('email').isEmail().withMessage("Email must be a valid email address."),
+                 authMiddleware,
+                 getUserInfoController
+)
 
 
 export default v1UserRouter

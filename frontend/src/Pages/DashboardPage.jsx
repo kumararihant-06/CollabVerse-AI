@@ -5,6 +5,7 @@ import {UserContext} from "../context/User.context.jsx";
 import CreateProjectModal from "../components/CreateProjectModal.jsx";
 import axios from '../config/axios.js';
 
+
 export default function DashboardPage() {
     const {user,loading} = useContext(UserContext);
     const navigate = useNavigate();
@@ -72,7 +73,6 @@ export default function DashboardPage() {
 
     useEffect(() => {
     const hour = new Date().getHours();
-
     if (hour < 12) setGreeting("Good Morning");
     else if (hour < 17) setGreeting("Good Afternoon");
     else setGreeting("Good Evening");
@@ -85,7 +85,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#0b0616] via-[#1a0b2e] to-[#2b0f45] text-white px-6 py-10">
 
       {/* Header */}
-      <header className="max-w-7xl mx-auto flex justify-between items-center">
+      <header className="max-w-7.5xl mx-auto flex justify-between items-center">
         <div>
             <h1 className="text-3xl font-semibold">
           {greeting}, <span className="text-purple-400">{user?.username}</span> 👋
@@ -105,7 +105,7 @@ export default function DashboardPage() {
       </header>
 
       {/* Projects Section */}
-      <section className="max-w-7xl mx-auto mt-12">
+      <section className="max-w-7.5xl mx-auto mt-12">
 
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold">Your Projects</h2>
