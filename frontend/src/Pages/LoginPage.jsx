@@ -19,9 +19,10 @@ export default function LoginPage() {
       }));
         console.log("Login Successful", response.data);
         localStorage.setItem('token', response.data.token);
-        connectSocket();
         setUser(response.data.user)
+        connectSocket();
         navigate("/dashboard");
+       
     } catch (error) {
       console.log("Error during login:", error);
       alert("Login failed. Please check your credentials and try again.");

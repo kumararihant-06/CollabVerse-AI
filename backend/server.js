@@ -4,6 +4,8 @@ import app from './app.js'
 import connectDB from './config/db.config.js';
 import {Server} from 'socket.io'
 import jwt from 'jsonwebtoken';
+import Project from './models/project.models.js';
+import Message from './models/message.models.js';
 dotenv.config()
 connectDB();
 
@@ -18,26 +20,47 @@ const io = new Server(server, {
 });
 
 io.use((socket, next) => {
-    try {
-        const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
-    if(!token){
-        return next(new Error("Authentication error: Token not provided."))
-    }
+  try {
+    const token = socket.handshake.auth?.token;
+
+    if (!token) return next(new Error("No token"));
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if(!decoded){
-        return next(new Error("Authentication error: Invalid token."))
-    }
+
     socket.user = decoded;
+    
     next();
-    } catch (error) {
-        next(error);
+  } catch (err) {
+    console.log("Socket auth error:", err.message);
+    next(err);
+  }
+});
+
+io.on("connection", (socket) => {
+  console.log("✅ Socket connected:", socket.id);
+
+  // JOIN PROJECT ROOM
+  socket.on("join-project", (projectId) => {
+    socket.join(projectId);
+    console.log(`${socket.user.username} joined project ${projectId}`);
+  });
+
+  // SEND MESSAGE
+  socket.on("send-message", async ({ projectId, message }) => {
+    try {
+     const newMessage = await Message.create({
+        sender: socket.user.userId,
+        project: projectId,
+        text: message
+     });
+
+     const populatedMessage = await newMessage.populate("sender", "username email")
+     console.log(populatedMessage)
+     io.to(projectId).emit("receive-message", populatedMessage)
+    } catch (err) {
+      console.log("Message error:", err.message);
     }
-
-})
-
-io.on('connection', client => {
-  client.on('event', data => { /* … */ });
-  client.on('disconnect', () => { /* … */ });
+  });
 });
 
 server.listen(PORT, () => {

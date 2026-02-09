@@ -5,7 +5,6 @@ import axios from "../config/axios.js";
 import { UserContext } from "../context/User.context.jsx";
 import InviteCollaboratorModal from "../components/InviteCollaboratorModal.jsx";
 import { connectSocket, getSocket } from "../config/socket.js";
-
 const ProjectPage = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -14,20 +13,7 @@ const ProjectPage = () => {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const { user, loading: userLoading } = useContext(UserContext);
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: "Arihant",
-      text: "Hey team 👋",
-      isMe: true,
-    },
-    {
-      id: 2,
-      sender: "John",
-      text: "Hello!",
-      isMe: false,
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
 
   async function fetchProject() {
@@ -38,6 +24,7 @@ const ProjectPage = () => {
           Authorization: `Bearer ${token}`,
         },
       });
+      console.log(response.data.project);
       setProject(response.data.project);
     } catch (error) {
       console.log(
@@ -50,20 +37,69 @@ const ProjectPage = () => {
     }
   }
 
+  async function fetchMessages() {
+    try {
+      const res = await axios.get(`/message/get-message/${projectId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      const formatted = res.data.messages.map((m) => ({
+        id: m._id,
+        text: m.text,
+        senderName: m.sender.username,
+        senderId:String(m.sender?._id ),
+        isMe: String(m.sender?._id ) === String(user.user?._id)
+      }));
+      setMessages(formatted);
+    } catch (error) {
+      console.log("Fetch old messages error:", error);
+    }
+  }
+
   const handleSendMessage = () => {
     if (!newMessage.trim()) return;
-    const message = {
-      id: Date.now(),
-      sender: user?.username,
-      text: newMessage,
-      isMe: true,
-    };
-    setMessages((prev) => [...prev, message]);
+    let socket = getSocket();
+    if(!socket){
+      socket = connectSocket();
+    }
+
+    socket.emit("send-message", {
+      projectId,
+      message: newMessage,
+    });
+
     setNewMessage("");
   };
   useEffect(() => {
-    const socket = getSocket();
-  }, []);
+    if(!user) return;
+    
+    let socket = getSocket();
+    if(!socket){
+      socket = connectSocket();
+    }
+    socket.emit("join-project", projectId);
+    fetchMessages();
+    socket.on("receive-message", (msg) => {
+      console.log(msg);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: msg._id,
+          text: msg.text,
+          senderName: msg.sender?.username,
+          senderId: String(msg.sender?._id || ''),
+          isMe: String(msg.sender?._id ) === String(user?.user._id),
+        },
+      ]);
+    });
+
+    return () => {
+      socket.off("receive-message");
+    };
+  }, [projectId, user]);
+
   useEffect(() => {
     if (!user && !userLoading) {
       navigate("/login");
@@ -132,13 +168,13 @@ const ProjectPage = () => {
                 <div
                   className={`max-w-xs px-4 py-2 rounded-xl text-sm ${
                     msg.isMe
-                      ? "bg-purple-600 text-white"
-                      : "bg-purple-300 text-gray-800"
+                      ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                      : "bg-gradient-to-r  from-pink-400 to-purple-400 text-white"
                   }`}
                 >
-                  {msg.isMe && (
-                    <div className="text-xs text-gray mb-1">{msg.sender}</div>
-                  )}
+                  <div className={`text-xs mb-1  text-white/70`}>
+                    {msg.senderName}
+                  </div>
                   {msg.text}
                 </div>
               </div>
@@ -147,7 +183,7 @@ const ProjectPage = () => {
 
           <div className="mt-4">
             <div className="flex items-end gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 backdrop-blur-xl">
-              <textarea
+              <input
                 value={newMessage}
                 onChange={(e) => {
                   setNewMessage(e.target.value);

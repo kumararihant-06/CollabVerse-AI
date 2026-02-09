@@ -1,38 +1,28 @@
-import {io} from "socket.io-client";
+import { io } from "socket.io-client";
 
-let socketInstance = null;
+let socket = null;
 
 export const connectSocket = () => {
-
-    socketInstance = io(import.meta.env.VITE_SOCKET_URL, {
-        auth: {
-            token: localStorage.getItem("token")
-        }
-    });
-
-    socketInstance.on("connect", () => {
-    console.log("Socket connected:", socketInstance.id);
+    if (socket) {
+    console.log("Socket already connected");
+    return socket;
+  }
+  socket = io(import.meta.env.VITE_SOCKET_URL, {
+    auth: {
+      token: localStorage.getItem("token")
+    },
+   
   });
 
-  socketInstance.on("connect_error", (err) => {
-    console.log("Socket error:", err.message);
+  socket.on("connect", () => {
+    console.log("✅ Connected:", socket.id);
   });
-    return socketInstance;
-}  
 
-export const getSocket = () => socketInstance;
+  socket.on("connect_error", (err) => {
+    console.log("❌ Socket error:", err.message);
+  });
 
-export const disconnectSocket = () => {
-    if(socketInstance){
-        socketInstance.disconnect();
-        socketInstance = null;
-    }
-}
+  return socket;
+};
 
-export const sendMessage = (eventName, data) => {
-    socketInstance?.emit(eventName, data);
-}
-
-export const recieveMessage = (eventName, callback) => {
-    socketInstance?.on(eventName,callback);
-}
+export const getSocket = () => socket;
