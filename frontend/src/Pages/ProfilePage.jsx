@@ -2,6 +2,7 @@ import {useContext} from "react";
 import { UserContext } from "../context/User.context";
 import { useNavigate } from 'react-router-dom';
 import axios from '../config/axios.js';
+import { disconnectSocket } from "../config/socket.js";
 
 const ProfilePage = () => {
 
@@ -16,9 +17,9 @@ const ProfilePage = () => {
                     Authorization: `Bearer ${token}`
                 }
             });
-           
-            navigate("/login");
+            disconnectSocket();
             setUser(null);
+            navigate("/login");
             localStorage.removeItem("token");
         } catch (error) {
             console.log("Error during logout: ", error.response?.data || error.message);

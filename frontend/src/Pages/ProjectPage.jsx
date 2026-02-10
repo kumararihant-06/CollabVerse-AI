@@ -50,7 +50,7 @@ const ProjectPage = () => {
         text: m.text,
         senderName: m.sender.username,
         senderId:String(m.sender?._id ),
-        isMe: String(m.sender?._id ) === String(user.user?._id)
+        isMe: String(m.sender?._id ) === String(user?._id)
       }));
       setMessages(formatted);
     } catch (error) {
@@ -90,7 +90,7 @@ const ProjectPage = () => {
           text: msg.text,
           senderName: msg.sender?.username,
           senderId: String(msg.sender?._id || ''),
-          isMe: String(msg.sender?._id ) === String(user?.user._id),
+          isMe: String(msg.sender?._id ) === String(user?._id),
         },
       ]);
     });

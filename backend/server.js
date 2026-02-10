@@ -4,7 +4,6 @@ import app from './app.js'
 import connectDB from './config/db.config.js';
 import {Server} from 'socket.io'
 import jwt from 'jsonwebtoken';
-import Project from './models/project.models.js';
 import Message from './models/message.models.js';
 dotenv.config()
 connectDB();
@@ -23,7 +22,10 @@ io.use((socket, next) => {
   try {
     const token = socket.handshake.auth?.token;
 
-    if (!token) return next(new Error("No token"));
+    if (!token) {
+      console.log("❌ Connection rejected: No token provided");
+      return next(new Error("No token"));
+    }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -31,18 +33,23 @@ io.use((socket, next) => {
     
     next();
   } catch (err) {
-    console.log("Socket auth error:", err.message);
+    console.log("❌ Socket auth error:", err.message);
     next(err);
   }
 });
 
 io.on("connection", (socket) => {
-  console.log("✅ Socket connected:", socket.id);
+  console.log(`✅ Socket connected: ${socket.id} | User: ${socket.user?.username || 'Unknown'}`);
+
+  // Handle disconnect
+  socket.on("disconnect", (reason) => {
+    console.log(`🔌 Socket disconnected: ${socket.id} | User: ${socket.user?.username || 'Unknown'} | Reason: ${reason}`);
+  });
 
   // JOIN PROJECT ROOM
   socket.on("join-project", (projectId) => {
     socket.join(projectId);
-    console.log(`${socket.user.username} joined project ${projectId}`);
+    console.log(`👥 ${socket.user.username} joined project ${projectId}`);
   });
 
   // SEND MESSAGE
@@ -55,7 +62,7 @@ io.on("connection", (socket) => {
      });
 
      const populatedMessage = await newMessage.populate("sender", "username email")
-     console.log(populatedMessage)
+     console.log(`Message sent in project ${projectId} by ${socket.user.username}`)
      io.to(projectId).emit("receive-message", populatedMessage)
     } catch (err) {
       console.log("Message error:", err.message);
@@ -66,4 +73,3 @@ io.on("connection", (socket) => {
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 })
-

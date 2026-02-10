@@ -22,9 +22,7 @@ export const UserProvider = ({children}) => {
                         Authorization: `Bearer ${token}`
                     }
                 });
-                setUser(...response.data.user,
-                    
-            );
+                setUser(response.data.user);
 
             } catch (error) {
                 localStorage.removeItem("token");
