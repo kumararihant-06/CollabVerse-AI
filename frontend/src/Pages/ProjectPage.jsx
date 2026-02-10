@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Users, X, Send } from "lucide-react";
 import axios from "../config/axios.js";
 import { UserContext } from "../context/User.context.jsx";
 import InviteCollaboratorModal from "../components/InviteCollaboratorModal.jsx";
 import { connectSocket, getSocket } from "../config/socket.js";
+import MarkdownViewer from "../components/MarkdownViewer.jsx";
+
 const ProjectPage = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -15,6 +17,12 @@ const ProjectPage = () => {
   const { user, loading: userLoading } = useContext(UserContext);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behaviour: "smooth" });
+  };
 
   async function fetchProject() {
     try {
@@ -38,20 +46,28 @@ const ProjectPage = () => {
   }
 
   async function fetchMessages() {
+    if (!user) {
+      console.log("User not loaded yet, skipping fetchMessages");
+      return;
+    }
     try {
       const res = await axios.get(`/message/get-message/${projectId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
+      const formatted = res.data.messages.map((m) => {
+        const senderId = String(m.sender?._id || "");
+        
 
-      const formatted = res.data.messages.map((m) => ({
-        id: m._id,
-        text: m.text,
-        senderName: m.sender.username,
-        senderId:String(m.sender?._id ),
-        isMe: String(m.sender?._id ) === String(user?._id)
-      }));
+        return {
+          id: m._id,
+          text: m.text,
+          senderName: m.sender?.username || "Unknown",
+          senderId: senderId,
+        };
+      });
+
       setMessages(formatted);
     } catch (error) {
       console.log("Fetch old messages error:", error);
@@ -61,7 +77,7 @@ const ProjectPage = () => {
   const handleSendMessage = () => {
     if (!newMessage.trim()) return;
     let socket = getSocket();
-    if(!socket){
+    if (!socket) {
       socket = connectSocket();
     }
 
@@ -72,25 +88,29 @@ const ProjectPage = () => {
 
     setNewMessage("");
   };
+  
   useEffect(() => {
-    if(!user) return;
-    
+    if(userLoading) return ;
+    if (!user) return;
+    console.log(user);
+    fetchMessages();
     let socket = getSocket();
-    if(!socket){
+    if (!socket) {
       socket = connectSocket();
     }
+
     socket.emit("join-project", projectId);
-    fetchMessages();
+
     socket.on("receive-message", (msg) => {
-      console.log(msg);
+      console.log("Received message:", msg);
       setMessages((prev) => [
         ...prev,
         {
           id: msg._id,
           text: msg.text,
-          senderName: msg.sender?.username,
-          senderId: String(msg.sender?._id || ''),
-          isMe: String(msg.sender?._id ) === String(user?._id),
+          senderName: msg.sender?.username || "Unknown",
+          senderId: String(msg.sender?._id || ""),
+          
         },
       ]);
     });
@@ -99,7 +119,10 @@ const ProjectPage = () => {
       socket.off("receive-message");
     };
   }, [projectId, user]);
-
+  
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
   useEffect(() => {
     if (!user && !userLoading) {
       navigate("/login");
@@ -107,11 +130,10 @@ const ProjectPage = () => {
     }
     fetchProject();
   }, [projectId, user, userLoading]);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b0616] via-[#1a0b2e] to-[#2b0f45] text-white flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-[#0b0616] via-[#1a0b2e] to-[#2b0f45] text-white flex flex-col overflow-hidden">
       {/* HEADER */}
-      <header className="h-16 border-b border-white/10 flex items-center justify-between px-6">
+      <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 shrink-0">
         {/* LEFT SIDE */}
         <div className="flex items-center gap-4">
           <button
@@ -147,65 +169,86 @@ const ProjectPage = () => {
       </header>
 
       {/* MAIN CONTENT */}
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-2/6 border-r border-white/10 p-6 flex flex-col">
-          <div className="flex w-full justify-between items-center mb-4 border-b border-white/10  px-6 py-3">
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        <div className="w-2/6 border-r border-white/10 flex flex-col min-h-0">
+          {" "}
+          {/* Removed p-6 */}
+          <div className="flex w-full justify-between items-center border-b border-white/10 px-6 py-3 flex-shrink-0">
+            {" "}
+            {/* Added flex-shrink-0 */}
             <h2 className="text-lg font-semibold">Project Chat.</h2>
-
             <button
               onClick={() => setIsInviteModalOpen(true)}
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 transition text-sm font-medium "
+              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 transition text-sm font-medium"
             >
               + Invite
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 pr-2">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.isMe ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-xs px-4 py-2 rounded-xl text-sm ${
-                    msg.isMe
-                      ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                      : "bg-gradient-to-r  from-pink-400 to-purple-400 text-white"
-                  }`}
-                >
-                  <div className={`text-xs mb-1  text-white/70`}>
-                    {msg.senderName}
-                  </div>
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-          </div>
+          
+          <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 px-6 py-4 min-h-0 no-scrollbar">
+            {messages.length === 0 && (
+              <p className="text-gray-400 text-center">No messages yet</p>
+            )}
+            {messages.map((msg) => {
+              const isIncomingMessageMe = msg.senderId === user?.userId;
+              const isAiMessage = msg.senderName === 'AI'; 
 
-          <div className="mt-4">
-            <div className="flex items-end gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 backdrop-blur-xl">
+              return (
+                <div key={msg.id} className={`flex ${isIncomingMessageMe ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-[70%] px-4 py-2 rounded-xl text-sm overflow-hidden ${
+                      isIncomingMessageMe
+                        ? "bg-purple-600 text-white rounded-tr-none"
+                        : isAiMessage 
+                            ? "bg-slate-800 text-white rounded-tl-none border border-white/10"
+                            : "bg-slate-700 text-white rounded-tl-none"
+                    }`}
+                  >
+                    <div className={`text-xs mb-1 ${isIncomingMessageMe ? "text-white" : "text-gray-400"} font-bold`}>
+                        {msg.senderName}
+                    </div>
+
+                    {isAiMessage ? (
+                        <div className="markdown-content">
+                            <MarkdownViewer content={msg.text} />
+                        </div>
+                    ) : (
+                        <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                    )}
+                  </div>
+                </div>
+              );
+              })}
+            <div ref={messagesEndRef} />
+          </div>
+         
+          <div className="px-4 py-2 flex-shrink-0 flex items-center">
+            <div className="flex-1 gap-3  bg-white/5 border border-white/10 rounded-2xl px-4 py-3 backdrop-blur-xl">
               <input
                 value={newMessage}
                 onChange={(e) => {
                   setNewMessage(e.target.value);
-                  e.target.style.height = "auto";
-                  e.target.style.height = e.target.scrollHeight + "px";
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
                 }}
                 placeholder="Type a message..."
-                rows={1}
-                className="flex-1 bg-transparent outline-none resize-none text-white placeholder-gray-400 max-h-32 overflow-y-auto leading-relaxed"
+                className="flex-1 w-full bg-transparent outline-none text-white placeholder-gray-400 "
               />
-
-              <button
-                onClick={handleSendMessage}
-                className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 transition"
-              >
-                <Send size={20} />
-              </button>
             </div>
+            <button
+              onClick={handleSendMessage}
+              className="flex items-center mx-1 justify-center w-10 h-10 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 transition"
+            >
+              <Send size={20} />
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-6 min-h-0">
           <div className="h-full rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center text-gray-500">
             Workspace Area (Coming Soon 🚀)
           </div>
@@ -214,7 +257,7 @@ const ProjectPage = () => {
 
       {/* COLLABORATOR PANEL */}
       {isCollaboratorPanelOpen && (
-        <div className="fixed top-0 left-0 h-full w-80 border-l border-white/10 bg-[#0b0616]/90 backdrop-blur-xl p-6 z-50 transition">
+        <div className="fixed top-0 left-0 h-full w-2/6 border-l border-white/10 bg-[#0b0616]/90 backdrop-blur-xl p-6 z-50 transition">
           <button
             onClick={() => setIsCollaboratorPanelOpen(false)}
             className="absolute -right-10 top-4 p-2 rounded-full bg-white/5 hover:bg-white/10"

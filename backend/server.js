@@ -5,6 +5,7 @@ import connectDB from './config/db.config.js';
 import {Server} from 'socket.io'
 import jwt from 'jsonwebtoken';
 import Message from './models/message.models.js';
+import { generateResultService } from './services/ai.services.js';
 dotenv.config()
 connectDB();
 
@@ -55,15 +56,50 @@ io.on("connection", (socket) => {
   // SEND MESSAGE
   socket.on("send-message", async ({ projectId, message }) => {
     try {
-     const newMessage = await Message.create({
+      const aiIsPresent = message.includes("@ai");
+    
+    if (aiIsPresent) {
+    
+      const userMessage = await Message.create({
+        sender: socket.user.userId,
+        project: projectId,
+        text: message
+      });
+      
+      const populatedUserMessage = await userMessage.populate("sender", "username email");
+      console.log(`Message sent in project ${projectId} by ${socket.user.username}`);
+      io.to(projectId).emit("receive-message", populatedUserMessage);
+      
+     
+      const prompt = message.replace("@ai", "").trim();
+      const responseFromAI = await generateResultService(prompt); 
+      
+      
+      const aiMessage = await Message.create({
+        sender: process.env.AI_USER_ID, 
+        project: projectId,
+        text: responseFromAI
+      });
+      
+      const populatedAIMessage = await aiMessage.populate("sender", "username email");
+      console.log(`AI response sent in project ${projectId}`);
+      io.to(projectId).emit("receive-message", populatedAIMessage);
+      
+      }else{
+
+        const newMessage = await Message.create({
         sender: socket.user.userId,
         project: projectId,
         text: message
      });
-
      const populatedMessage = await newMessage.populate("sender", "username email")
      console.log(`Message sent in project ${projectId} by ${socket.user.username}`)
      io.to(projectId).emit("receive-message", populatedMessage)
+
+    }
+     
+
+     
     } catch (err) {
       console.log("Message error:", err.message);
     }
