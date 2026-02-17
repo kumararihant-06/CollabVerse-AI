@@ -14,6 +14,7 @@ Follow these strict guidelines:
 5.  **Formatting**: Use Markdown heavily. Always use language-specific code blocks (e.g., \`\`\`javascript).
 6.  **Tone**: Be precise, helpful, and concise. Avoid unnecessary fluff—focus on the solution.
 7.  **Masterful Explanations**: Explain concepts with deep technical understanding and clarity. Use analogies for complex logic, discuss trade-offs (pros/cons), and always answer the "why" behind technical choices, not just the "how".`        
+
 });
 
 export const generateResultService = async (prompt) => {

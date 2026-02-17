@@ -11,7 +11,7 @@ export const executeCodeController = async (req, res) => {
         }
 
         const result = await executeCodeService(code, language);
-        return res.status(200).json({result})
+        return res.status(200).json(result)
     } catch (error) {
         console.log("Execute code controller error: ", error)
         return res.status(500).json({
