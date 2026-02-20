@@ -59,11 +59,11 @@ export default function InviteCollaboratorModal({
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
-      <div className="bg-[#12081f] p-6 rounded-2xl w-full max-w-md border border-white/10">
+      <div className="bg-[#12081f] p-6 rounded-2xl w-full max-w-md border border-white/10 text-white">
 
         <div className="flex justify-between mb-6">
           <h2 className="text-xl font-semibold">Invite Collaborator</h2>
-          <button onClick={onClose}>
+          <button onClick={onClose} >
             <X />
           </button>
         </div>
@@ -75,7 +75,7 @@ export default function InviteCollaboratorModal({
             placeholder="Enter collaborator email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl bg-black/40 border border-white/10"
+            className="w-full px-4 py-2 rounded-xl bg-black/40 border border-white/10 text-white"
           />
 
           <button

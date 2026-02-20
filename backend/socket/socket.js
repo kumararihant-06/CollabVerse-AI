@@ -25,217 +25,148 @@ export const initializeSocket = (io) => {
   });
 
   io.on("connection", (socket) => {
-    console.log(`Socket connected: ${socket.id} | User: ${socket.user?.username || 'Unknown'}`);
+  console.log(`✅ Socket connected: ${socket.id} | User: ${socket.user?.username || 'Unknown'}`);
 
-    // Handle disconnect
-    socket.on("disconnect", (reason) => {
-      console.log(`Socket disconnected: ${socket.id} | User: ${socket.user?.username || 'Unknown'} | Reason: ${reason}`);
+  socket.on("disconnect", (reason) => {
+    console.log(`🔌 Socket disconnected: ${socket.id} | Reason: ${reason}`);
+  });
+
+  // ─── JOIN PROJECT ROOM ────────────────────────────────────────────
+  socket.on("join-project", (projectId) => {
+    socket.join(projectId);
+    console.log(`👥 ${socket.user.username} joined project ${projectId}`);
+  });
+
+  // ─── CHAT: SEND MESSAGE ───────────────────────────────────────────
+  socket.on("send-message", async ({ projectId, message, file }) => {
+    try {
+      const messageData = {
+        sender: socket.user.userId,
+        project: projectId,
+        text: message || ""
+      };
+      if (file) messageData.file = file;
+
+      const newMessage = await Message.create(messageData);
+      const populatedMessage = await newMessage.populate("sender", "username email");
+      io.to(projectId).emit("receive-message", populatedMessage);
+    } catch (err) {
+      console.log("❌ Message error:", err.message);
+    }
+  });
+
+  // ─── CHAT: EDIT MESSAGE ───────────────────────────────────────────
+  socket.on("edit-message", async ({ messageId, newText, projectId }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) return socket.emit("error", { message: "Message not found" });
+      if (message.sender.toString() !== socket.user.userId)
+        return socket.emit("error", { message: "Unauthorized" });
+
+      message.text = newText;
+      message.isEdited = true;
+      message.editedAt = new Date();
+      await message.save();
+
+      const populated = await message.populate("sender", "username email");
+      io.to(projectId).emit("message-edited", populated);
+    } catch (err) {
+      socket.emit("error", { message: "Error editing message" });
+    }
+  });
+
+  // ─── CHAT: DELETE MESSAGE ─────────────────────────────────────────
+  socket.on("delete-message", async ({ messageId, projectId }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) return socket.emit("error", { message: "Message not found" });
+      if (message.sender.toString() !== socket.user.userId)
+        return socket.emit("error", { message: "Unauthorized" });
+
+      message.isDeleted = true;
+      message.deletedAt = new Date();
+      message.text = "This message was deleted";
+      await message.save();
+
+      io.to(projectId).emit("message-deleted", { messageId });
+    } catch (err) {
+      socket.emit("error", { message: "Error deleting message" });
+    }
+  });
+
+  // ─── FILE EVENTS (existing) ───────────────────────────────────────
+  socket.on("create-file", async ({ projectId, fileName, language }) => {
+    // handled by your existing file controller
+  });
+
+  // ─── VIDEO CALL: JOIN ─────────────────────────────────────────────
+  socket.on("join-video-call", ({ projectId, username }) => {
+    socket.join(`call:${projectId}`);
+    // Notify everyone ELSE in the call that this user joined
+    socket.to(`call:${projectId}`).emit("user-joined-call", {
+      userId: socket.user.userId,
+      username: username || socket.user.username,
     });
+    console.log(`📞 ${socket.user.username} joined video call in project ${projectId}`);
+  });
 
-    // JOIN PROJECT ROOM
-    socket.on("join-project", (projectId) => {
-      socket.join(projectId);
-      console.log(`${socket.user.username} joined project ${projectId}`);
+  // ─── VIDEO CALL: LEAVE ────────────────────────────────────────────
+  socket.on("leave-video-call", ({ projectId }) => {
+    socket.leave(`call:${projectId}`);
+    socket.to(`call:${projectId}`).emit("user-left-call", {
+      userId: socket.user.userId,
+      username: socket.user.username,
     });
+    console.log(`📴 ${socket.user.username} left video call in project ${projectId}`);
+  });
 
-    // ========== MESSAGE EVENTS ==========
-
-    // SEND MESSAGE
-    socket.on("send-message", async ({ projectId, message }) => {
-      try {
-        const aiIsPresent = message.includes("@ai");
-      
-        if (aiIsPresent) {
-          // User message
-          const userMessage = await Message.create({
-            sender: socket.user.userId,
-            project: projectId,
-            text: message
-          });
-          
-          const populatedUserMessage = await userMessage.populate("sender", "username email");
-          console.log(`Message sent in project ${projectId} by ${socket.user.username}`);
-          io.to(projectId).emit("receive-message", populatedUserMessage);
-          
-          // AI response
-          const prompt = message.replace("@ai", "").trim();
-          const responseFromAI = await generateResultService(prompt); 
-          
-          const aiMessage = await Message.create({
-            sender: process.env.AI_USER_ID, 
-            project: projectId,
-            text: responseFromAI
-          });
-          
-          const populatedAIMessage = await aiMessage.populate("sender", "username email");
-          console.log(`AI response sent in project ${projectId}`);
-          io.to(projectId).emit("receive-message", populatedAIMessage);
-          
-        } else {
-          // Regular message
-          const newMessage = await Message.create({
-            sender: socket.user.userId,
-            project: projectId,
-            text: message
-          });
-          
-          const populatedMessage = await newMessage.populate("sender", "username email");
-          console.log(`Message sent in project ${projectId} by ${socket.user.username}`);
-          io.to(projectId).emit("receive-message", populatedMessage);
-        }
-      } catch (err) {
-        console.log("Message error:", err.message);
-      }
-    });
-
-    // ========== FILE COLLABORATION EVENTS ==========
-
-    // CREATE FILE
-    socket.on("create-file", async ({ projectId, fileName, language }) => {
-      try {
-        const project = await Project.findById(projectId);
-        
-        if (!project) {
-          return socket.emit("error", { message: "Project not found" });
-        }
-
-        // Check if file already exists
-        const existingFile = project.files.find(f => f.name === fileName);
-        if (existingFile) {
-          return socket.emit("error", { message: "File already exists" });
-        }
-
-        const newFile = {
-          name: fileName,
-          content: '',
-          language: language || 'javascript',
-          createdBy: socket.user.userId,
-          lastEditedBy: socket.user.userId,
-          lastEditedAt: new Date()
-        };
-
-        project.files.push(newFile);
-        await project.save();
-
-        // Broadcast to all users in the project
-        io.to(projectId).emit("file-created", {
-          file: newFile,
-          createdBy: socket.user.username
-        });
-
-        console.log(`File "${fileName}" created in project ${projectId} by ${socket.user.username}`);
-      } catch (err) {
-        console.log("Create file error:", err.message);
-        socket.emit("error", { message: "Error creating file" });
-      }
-    });
-
-    // UPDATE FILE CONTENT (Real-time editing)
-    socket.on("update-file", async ({ projectId, fileName, content }) => {
-      try {
-        const project = await Project.findById(projectId);
-
-        if (!project) {
-          return socket.emit("error", { message: "Project not found" });
-        }
-
-        const file = project.files.find(f => f.name === fileName);
-        if (!file) {
-          return socket.emit("error", { message: "File not found" });
-        }
-
-        file.content = content;
-        file.lastEditedBy = socket.user.userId;
-        file.lastEditedAt = new Date();
-        await project.save();
-
-        socket.to(projectId).emit("file-updated", {
-          fileName: fileName,
-          content: content,
-          lastEditedBy: socket.user.username,
-          lastEditedAt: file.lastEditedAt
-        });
-
-        console.log(`File "${fileName}" updated in project ${projectId} by ${socket.user.username}`);
-      } catch (err) {
-        console.log("Update file error:", err.message);
-        socket.emit("error", { message: "Error updating file" });
-      }
-    });
-
-    // DELETE FILE
-    socket.on("delete-file", async ({ projectId, fileName }) => {
-      try {
-        const project = await Project.findById(projectId);
-        
-        if (!project) {
-          return socket.emit("error", { message: "Project not found" });
-        }
-
-        project.files = project.files.filter(f => f.name !== fileName);
-        await project.save();
-
-        // Broadcast to all users in the project
-        io.to(projectId).emit("file-deleted", {
-          fileName: fileName,
-          deletedBy: socket.user.username
-        });
-
-        console.log(`File "${fileName}" deleted from project ${projectId} by ${socket.user.username}`);
-      } catch (err) {
-        console.log("Delete file error:", err.message);
-        socket.emit("error", { message: "Error deleting file" });
-      }
-    });
-
-    // RENAME FILE
-    socket.on("rename-file", async ({ projectId, oldName, newName }) => {
-      try {
-        const project = await Project.findById(projectId);
-        
-        if (!project) {
-          return socket.emit("error", { message: "Project not found" });
-        }
-
-        const file = project.files.find(f => f.name === oldName);
-        
-        if (!file) {
-          return socket.emit("error", { message: "File not found" });
-        }
-
-        // Check if new name already exists
-        const existingFile = project.files.find(f => f.name === newName);
-        if (existingFile) {
-          return socket.emit("error", { message: "File with new name already exists" });
-        }
-
-        file.name = newName;
-        await project.save();
-
-        // Broadcast to all users in the project
-        io.to(projectId).emit("file-renamed", {
-          oldName: oldName,
-          newName: newName,
-          renamedBy: socket.user.username
-        });
-
-        console.log(`File renamed from "${oldName}" to "${newName}" in project ${projectId} by ${socket.user.username}`);
-      } catch (err) {
-        console.log("Rename file error:", err.message);
-        socket.emit("error", { message: "Error renaming file" });
-      }
-    });
-
-    socket.on("cursor-position", ({ projectId, fileName, line, column }) => {
-      socket.to(projectId).emit("user-cursor", {
-        userId: socket.user.userId,
-        username: socket.user.username,
-        fileName: fileName,
-        line: line,
-        column: column
-      });
+  // ─── VIDEO CALL: OFFER ────────────────────────────────────────────
+  socket.on("call-offer", ({ projectId, offer, targetUserId }) => {
+    // Find the target socket and send directly to them
+    io.to(`call:${projectId}`).emit("call-offer", {
+      offer,
+      fromUserId: socket.user.userId,
+      fromUsername: socket.user.username,
+      targetUserId,
     });
   });
 
-  console.log('Socket.io initialized');
-};
+  // ─── VIDEO CALL: ANSWER ───────────────────────────────────────────
+  socket.on("call-answer", ({ projectId, answer, targetUserId }) => {
+    io.to(`call:${projectId}`).emit("call-answer", {
+      answer,
+      fromUserId: socket.user.userId,
+      targetUserId,
+    });
+  });
+
+  // ─── VIDEO CALL: ICE CANDIDATE ────────────────────────────────────
+  socket.on("ice-candidate", ({ projectId, candidate, targetUserId }) => {
+    socket.to(`call:${projectId}`).emit("ice-candidate", {
+      candidate,
+      fromUserId: socket.user.userId,
+    });
+  });
+
+  // ─── VIDEO CALL: TOGGLE VIDEO/AUDIO ──────────────────────────────
+  socket.on("toggle-video", ({ projectId, enabled }) => {
+    socket.to(`call:${projectId}`).emit("user-toggled-video", {
+      userId: socket.user.userId,
+      enabled,
+    });
+  });
+
+  socket.on("toggle-audio", ({ projectId, enabled }) => {
+    socket.to(`call:${projectId}`).emit("user-toggled-audio", {
+      userId: socket.user.userId,
+      enabled,
+    });
+  });
+
+  // ─── SOCKET ERROR ─────────────────────────────────────────────────
+  socket.on("error", ({ message }) => {
+    console.error("Socket error:", message);
+  });
+  })}
+
+
