@@ -186,7 +186,7 @@ const ProjectPage = () => {
       });
     });
 
-    // FILE: updated
+    // FILE: updated (listen for server's `file-updated` event)
     socket.on("file-updated", ({ fileName, content, lastEditedBy }) => {
       setFiles(prev =>
         prev.map(f => f.name === fileName

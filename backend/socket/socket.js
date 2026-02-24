@@ -96,8 +96,76 @@ export const initializeSocket = (io) => {
 
   // ─── FILE EVENTS (existing) ───────────────────────────────────────
   socket.on("create-file", async ({ projectId, fileName, language }) => {
-    // handled by your existing file controller
+     try {
+        const project = await Project.findById(projectId);
+        
+        if (!project) {
+          return socket.emit("error", { message: "Project not found" });
+        }
+
+        // Check if file already exists
+        const existingFile = project.files.find(f => f.name === fileName);
+        if (existingFile) {
+          return socket.emit("error", { message: "File already exists" });
+        }
+
+        const newFile = {
+          name: fileName,
+          content: '',
+          language: language || 'javascript',
+          createdBy: socket.user.userId,
+          lastEditedBy: socket.user.userId,
+          lastEditedAt: new Date()
+        };
+
+        project.files.push(newFile);
+        await project.save();
+
+        // Broadcast to all users in the project
+        io.to(projectId).emit("file-created", {
+          file: newFile,
+          createdBy: socket.user.username
+        });
+
+        console.log(`File "${fileName}" created in project ${projectId} by ${socket.user.username}`);
+      } catch (err) {
+        console.log("Create file error:", err.message);
+        socket.emit("error", { message: "Error creating file" });
+      }
   });
+
+  socket.on("file-updated", async ({ projectId, fileName, content }) => {
+      try {
+        const project = await Project.findById(projectId);
+
+        if (!project) {
+          return socket.emit("error", { message: "Project not found" });
+        }
+
+        const file = project.files.find(f => f.name === fileName);
+        if (!file) {
+          return socket.emit("error", { message: "File not found" });
+        }
+
+        file.content = content;
+        file.lastEditedBy = socket.user.userId;
+        file.lastEditedAt = new Date();
+        await project.save();
+        console.log("file updated successfully")
+
+        socket.to(projectId).emit("file-updated", {
+          fileName: fileName,
+          content: content,
+          lastEditedBy: socket.user?.username,
+          lastEditedAt: file?.lastEditedAt
+        });
+
+        console.log(`File "${fileName}" updated in project ${projectId} by ${socket.user.username}`);
+      }catch (err) {
+        console.log("Update file error:", err.message);
+        socket.emit("error", { message: "Error updating file" });
+      }
+  })
 
   // ─── VIDEO CALL: JOIN ─────────────────────────────────────────────
   socket.on("join-video-call", ({ projectId, username }) => {
@@ -168,5 +236,3 @@ export const initializeSocket = (io) => {
     console.error("Socket error:", message);
   });
   })}
-
-

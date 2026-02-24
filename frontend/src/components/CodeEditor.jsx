@@ -20,7 +20,11 @@ const CodeEditor = ({
     if (editorRef.current && file && !isUpdatingFromSocket.current) {
       const currentValue = editorRef.current.getValue();
       if (currentValue !== file.content) {
+        // mark that this update originates from socket to avoid re-emitting
+        isUpdatingFromSocket.current = true;
         editorRef.current.setValue(file.content || '');
+        // reset on next tick after Monaco processes the setValue
+        setTimeout(() => { isUpdatingFromSocket.current = false; }, 0);
       }
     }
   }, [file?.content]);
