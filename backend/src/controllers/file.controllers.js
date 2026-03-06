@@ -29,11 +29,14 @@ export const getProjectFilesController = async (req, res) => {
 
 export const saveProjectFileController = async (req, res) => {
     try {
-        const {projectId, fileName, content} = req.body;
-        if(!projectId || !fileName ) return res.status(400).json({message: "project ID and file name are required."})
-        const result = await saveProjectFileService({projectId, fileName, content});
-        return req.status(200).json({message: "Success"})
+        const { projectId, fileName, content } = req.body;
+        if (!projectId || !fileName) {
+            return res.status(400).json({ message: "project ID and file name are required." });
+        }
+        const userId = req.user?.userId || req.user?._id;
+        await saveProjectFileService({ projectId, fileName, content, userId });
+        return res.status(200).json({ message: "Success" });
     } catch (error) {
-        res.status(404).json({message: `Error occurred: ${error.message}`})
+        res.status(500).json({ message: `Error occurred: ${error.message}` });
     }
 }

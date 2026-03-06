@@ -180,6 +180,15 @@ const ProjectPage = () => {
       });
     });
 
+    // FILE: updated — sync content + lastEditedBy for all users in real time
+    socket.on("file-updated", ({ fileName, content, lastEditedBy, lastEditedAt }) => {
+      setFiles(prev =>
+        prev.map(f => f.name === fileName
+          ? { ...f, content, lastEditedBy, lastEditedAt }
+          : f
+        )
+      );
+    });
 
     // FILE: deleted
     socket.on("file-deleted", ({ fileName }) => {

@@ -23,10 +23,7 @@ export default function InviteCollaboratorModal({
       // STEP 1 → Find User
       const userRes = await axios.post(
         "/user/user-info",
-        { email },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { email }
       );
 
       const userId = userRes.data.user._id;
@@ -37,9 +34,6 @@ export default function InviteCollaboratorModal({
         {
           projectId,
           users: [userId]
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
         }
       );
 

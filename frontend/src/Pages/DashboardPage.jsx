@@ -17,12 +17,7 @@ export default function DashboardPage() {
         try {
             const token = localStorage.getItem("token");
         const newProject = await axios.post("/project/create", 
-            {projectName: projectName},
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            }
+            {projectName: projectName}
         )
         setProjects((prev) => [...prev, newProject.data.project]);
         } catch (error) {
@@ -34,13 +29,7 @@ export default function DashboardPage() {
     const fetchProjects = async () => {
        try {
          const token = localStorage.getItem("token");
-         const response = await axios.get("/project/all-projects",
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            }
-         )
+         const response = await axios.get("/project/all-projects")
          setProjects(response.data.projects);
        } catch (error) {
         console.log("Error fetching projects: ", error.response?.data || error.message)
@@ -52,11 +41,7 @@ export default function DashboardPage() {
     const handleProfileClick = async () => {
         const token = localStorage.getItem("token")
         try {
-            await axios.get("/user/profile",{
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
+            await axios.get("/user/profile");
         navigate("/profile");
         } catch (error) {
             localStorage.removeItem("token");
