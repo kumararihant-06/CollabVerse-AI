@@ -38,7 +38,7 @@ const CodeEditor = ({
     monaco.editor.setTheme('vs-dark');
 
     const provider = new WebsocketProvider(
-      'ws://localhost:3000/yjs',
+      import.meta.env.VITE_YJS_URL,
       `${projectId}-${file.name}`,
       doc
     );
