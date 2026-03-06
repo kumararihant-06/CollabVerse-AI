@@ -1,4 +1,5 @@
-import {  getProjectFilesService } from "../services/file.services.js";
+import e from "express";
+import {  getProjectFilesService, saveProjectFileService } from "../services/file.services.js";
 
 export const getProjectFilesController = async (req, res) => {
     try {
@@ -26,3 +27,13 @@ export const getProjectFilesController = async (req, res) => {
     }
 };
 
+export const saveProjectFileController = async (req, res) => {
+    try {
+        const {projectId, fileName, content} = req.body;
+        if(!projectId || !fileName ) return res.status(400).json({message: "project ID and file name are required."})
+        const result = await saveProjectFileService({projectId, fileName, content});
+        return req.status(200).json({message: "Success"})
+    } catch (error) {
+        res.status(404).json({message: `Error occurred: ${error.message}`})
+    }
+}

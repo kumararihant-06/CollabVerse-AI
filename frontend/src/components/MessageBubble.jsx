@@ -115,9 +115,9 @@ const MessageBubble = ({ msg, isMe, onEdit, onDelete, onDownload }) => {
                 setIsEditing(true);
                 setShowMenu(false);
               }}
-              className="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 text-sm"
+              className="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 text-sm text-white"
             >
-              <Edit2 size={14} />
+              <Edit2 size={14} className="text-white"/>
               Edit
             </button>
             <button

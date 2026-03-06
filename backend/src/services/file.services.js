@@ -13,3 +13,15 @@ export const getProjectFilesService = async (projectId) => {
     return project.files || [];
 }
 
+export const saveProjectFileService = async ({projectId, fileName, content}) => {
+    const project = await Project.findById(projectId);
+    const file = project.files.find(f => f.name === fileName);
+    if(file){
+        file.content = content;
+        await project.save();
+        return project;
+    }else{
+        throw new Error("File not found")
+    }
+}
+

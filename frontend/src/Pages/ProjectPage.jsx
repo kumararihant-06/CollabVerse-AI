@@ -124,12 +124,6 @@ const ProjectPage = () => {
   // ─── FILE HANDLERS ────────────────────────────────────────────────
   const handleFileSelect = (fileName) => setActiveFile(fileName);
 
-  const handleFileContentChange = (fileName, content) => {
-    setFiles(prevFiles =>
-      prevFiles.map(f => f.name === fileName ? { ...f, content } : f)
-    );
-  };
-
   const getActiveFileObject = () => files.find(f => f.name === activeFile);
 
   // ─── SOCKET SETUP ─────────────────────────────────────────────────
@@ -186,15 +180,6 @@ const ProjectPage = () => {
       });
     });
 
-    // FILE: updated (listen for server's `file-updated` event)
-    socket.on("file-updated", ({ fileName, content, lastEditedBy }) => {
-      setFiles(prev =>
-        prev.map(f => f.name === fileName
-          ? { ...f, content, lastEditedBy: { username: lastEditedBy } }
-          : f
-        )
-      );
-    });
 
     // FILE: deleted
     socket.on("file-deleted", ({ fileName }) => {
@@ -351,7 +336,6 @@ const ProjectPage = () => {
                 <CodeEditor
                   file={getActiveFileObject()}
                   projectId={projectId}
-                  onContentChange={handleFileContentChange}
                   setOutput={setOutput}
                   isRunning={isRunning}
                   setIsRunning={setIsRunning}

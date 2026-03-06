@@ -134,7 +134,7 @@ export const initializeSocket = (io) => {
       }
   });
 
-  socket.on("file-updated", async ({ projectId, fileName, content }) => {
+  socket.on("update-file", async ({ projectId, fileName, content }) => {
       try {
         const project = await Project.findById(projectId);
 
@@ -156,7 +156,10 @@ export const initializeSocket = (io) => {
         socket.to(projectId).emit("file-updated", {
           fileName: fileName,
           content: content,
-          lastEditedBy: socket.user?.username,
+          lastEditedBy: {
+            _id: socket.user.userId,
+            username: socket.user.username
+          },
           lastEditedAt: file?.lastEditedAt
         });
 

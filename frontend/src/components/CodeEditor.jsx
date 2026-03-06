@@ -1,5 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import * as Y from 'yjs';
+import { MonacoBinding} from 'y-monaco';
+import { WebsocketProvider } from 'y-websocket';
 import { Play, Loader } from 'lucide-react';
 import axios from '../config/axios';
 import { getSocket } from '../config/socket';
@@ -7,50 +10,66 @@ import { getSocket } from '../config/socket';
 const CodeEditor = ({ 
   file, 
   projectId, 
-  onContentChange, 
+  user, 
   setOutput, 
   isRunning, 
   setIsRunning 
 }) => {
-  const editorRef = useRef(null);
-  const isUpdatingFromSocket = useRef(false);
 
   useEffect(() => {
-    // Update editor when file changes externally (from socket)
-    if (editorRef.current && file && !isUpdatingFromSocket.current) {
-      const currentValue = editorRef.current.getValue();
-      if (currentValue !== file.content) {
-        // mark that this update originates from socket to avoid re-emitting
-        isUpdatingFromSocket.current = true;
-        editorRef.current.setValue(file.content || '');
-        // reset on next tick after Monaco processes the setValue
-        setTimeout(() => { isUpdatingFromSocket.current = false; }, 0);
-      }
-    }
-  }, [file?.content]);
+    return () => {
+      providerRef.current?.destroy();
+      docRef.current?.destroy();
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [file.name]);
+
+  
+  const editorRef = useRef(null);
+  const providerRef = useRef(null);
+  const docRef = useRef(null);
+  const saveTimeoutRef = useRef(null);
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
+    const doc = new Y.Doc();
+    docRef.current = doc;
     monaco.editor.setTheme('vs-dark');
-  };
+    const provider = new WebsocketProvider(
+      'ws://localhost:3000/yjs', 
+      `${projectId}-${file.name}`, 
+      doc
+    );
+    providerRef.current = provider;
 
-  const handleEditorChange = (value) => {
-    if (!file || isUpdatingFromSocket.current) return;
+    const ytext = doc.getText('monaco');
+    const binding = new MonacoBinding(ytext, editor.getModel(), new Set([editor]), provider.awareness);
 
-    // Update local state
-    onContentChange(file.name, value || '');
-
-    // Emit socket event to sync with others
-    const socket = getSocket();
-    if (socket) {
-      socket.emit('update-file', {
-        projectId,
-        fileName: file.name,
-        content: value || ''
-      });
+    // Initial load from the 'file' prop (if room is empty)
+    if (ytext.toString() === '' && file.content) {
+      ytext.insert(0, file.content);
     }
-  };
 
+    // Set user cursor color/name
+    provider.awareness.setLocalStateField('user', {
+      name: user?.username || 'Guest',
+      color: '#30bced'
+    });
+
+    // ─── DEBOUNCED AUTOSAVE ───
+    ytext.observe(() => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          await axios.post('/file/save-content', {
+            projectId,
+            fileName: file.name,
+            content: ytext.toString()
+          });
+        } catch (err) { console.error("Save failed", err); }
+      }, 2000); // Save after 2s of silence
+    });
+  };
   const handleRunCode = async () => {
     if (!file) return;
 
@@ -96,6 +115,7 @@ const CodeEditor = ({
     );
   }
 
+  
   return (
     <div className="h-full flex flex-col bg-[#1e1e1e]">
       {/* Editor Header */}
@@ -135,8 +155,6 @@ const CodeEditor = ({
         <Editor
           height="100%"
           language={file.language}
-          value={file.content || ''}
-          onChange={handleEditorChange}
           onMount={handleEditorDidMount}
           theme="vs-dark"
           options={{
