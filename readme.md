@@ -1,6 +1,6 @@
 # CollabVerse AI
 
-A real-time collaborative development platform that combines a multi-user code editor, AI pair programming, project chat, file management, and video calling — all in one workspace.
+A real-time collaborative development platform that combines a multi-user code editor, AI pair programming, project chat, file management, and video calling - all in one workspace.
 
 ---
 
@@ -68,13 +68,13 @@ A real-time collaborative development platform that combines a multi-user code e
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Frontend (Vite)                   │
-│                                                      │
+│                    Frontend (Vite)                  │
+│                                                     │
 │  Monaco Editor ←→ y-monaco ←→ Yjs Doc               │
-│                                   ↕                  │
-│                          y-websocket client          │
+│                                   ↕                 │
+│                          y-websocket client         │
 └──────────────────────┬──────────────────────────────┘
-                       │ HTTP (Axios)     │ WebSocket
+                       │ HTTP (Axios)    │ WebSocket
                        ↓                 ↓
 ┌──────────────────────────────────────────────────────┐
 │                  Backend (Express)                   │
