@@ -1,8 +1,9 @@
+import { BadRequestError } from "../errors/AppError.js";
 import Message from "../models/message.models.js";
 
 export const getProjectMessageService = async ({projectId}) => {
     if(!projectId){
-        throw new Error("Project Id is required.")
+        throw new BadRequestError("Project Id is required.")
     }
     try {
         const messages = await Message.find({project: projectId})

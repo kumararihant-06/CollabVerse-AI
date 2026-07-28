@@ -1,3 +1,4 @@
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../errors/AppError.js';
 import Project from '../models/project.models.js';
 import mongoose from 'mongoose';
 
@@ -6,21 +7,21 @@ export const createProjectService = async ({
     userId
 }) => {
     if(!projectName){
-        throw new Error("Project name is required.")
+        throw new BadRequestError("Project name is required.")
     }
     if(!userId){
-        throw new Error("User ID is required.")
+        throw new BadRequestError("User ID is required.")
     }
     
     try {
        const project = await Project.create({
-        name: projectName,
-        users: [userId]
-    })
+            name: projectName,
+            users: [userId]
+        });
         return project;
     } catch (error) {
         if(error.code === 11000){
-            throw new Error("Project name must be unique.")
+            throw new ConflictError("Project name must be unique.")
         }
         throw error;
     }
@@ -30,38 +31,34 @@ export const createProjectService = async ({
 
 export const getAllProjectsService = async ({userId}) => {
     if(!userId){
-        throw new Error("User ID is required.")
+        throw new BadRequestError("User ID is required.")
     }
-
-    try {
-        const projects = await Project.find({
+    const projects = await Project.find({
             users: userId
         })
 
         return projects;
-    } catch (error) {
-        
-    }
+
 }
 
 export const addUserToProjectService = async ({projectId, users, userId}) => {
 
     if(!projectId){
-        throw new Error("Project ID is required.")
+        throw new BadRequestError("Project ID is required.")
     }
     if(!mongoose.Types.ObjectId.isValid(projectId)){
-        throw new Error("Invalid Project ID")
+        throw new BadRequestError("Invalid Project ID")
     }
     if(!users || !Array.isArray(users) || users.some(userId => !mongoose.Types.ObjectId.isValid(userId) || users.length === 0)){
-        throw new Error("Users must be a non-empty array of valid User IDs.")
+        throw new BadRequestError("Users must be a non-empty array of valid User IDs.")
     } 
 
     if(!userId){
-        throw new Error("User ID is required.");
+        throw new BadRequestError("User ID is required.");
     }
 
     if(!mongoose.Types.ObjectId.isValid(userId)){
-        throw new Error("Invalid User ID.")
+        throw new BadRequestError("Invalid User ID.")
     }
 
     const project = await Project.findOne({
@@ -70,7 +67,7 @@ export const addUserToProjectService = async ({projectId, users, userId}) => {
     });
 
     if(!project){
-        throw new Error("Project not found or you do not have permission to modify this project.")
+        throw new ForbiddenError("Project not found or you do not have permission to modify this project.")
     }
 
     const updatedProject = await Project.findOneAndUpdate({
@@ -91,11 +88,11 @@ export const addUserToProjectService = async ({projectId, users, userId}) => {
 
 export const getProjectByIdService = async ({projectId}) =>{
     if(!projectId){
-        throw new Error("Project Id is required.");
+        throw new BadRequestError("Project Id is required.");
     }
 
     if(!mongoose.Types.ObjectId.isValid(projectId)){
-        throw new Error("Invalid Project ID.")
+        throw new BadRequestError("Invalid Project ID.")
     }
 
     // populate user references with basic fields (username, email)
@@ -104,7 +101,7 @@ export const getProjectByIdService = async ({projectId}) =>{
     }).populate('users', 'username email')
 
     if(!project){
-        throw new Error("Project not found.")
+        throw new NotFoundError("Project not found.")
     }
 
     return project;
