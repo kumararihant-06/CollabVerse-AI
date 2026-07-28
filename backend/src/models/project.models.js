@@ -31,10 +31,14 @@ const projectSchema = new mongoose.Schema({
     name:{
         type: String,
         required: true,
-        trim: true,
-        unique: [true, 'Project name must be unique.']
+        trim: true
     },
-    users: [
+    owner: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    collaborators: [
         {
              type: mongoose.Schema.Types.ObjectId,
              ref: 'User'
@@ -59,7 +63,9 @@ const projectSchema = new mongoose.Schema({
             }
         }
     ]
-}) 
+})
+
+projectSchema.index({ owner: 1, name: 1 }, { unique: true })
 
 const Project = mongoose.model("Project", projectSchema);
 

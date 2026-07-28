@@ -282,7 +282,7 @@ const ProjectPage = () => {
             className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/10 rounded cursor-pointer transition"
           >
             <Users size={18} className="text-white" />
-            <span className="text-sm text-white">{project?.users?.length || 0}</span>
+            <span className="text-sm text-white">{(project?.collaborators?.length || 0) + 1}</span>
           </div>
         </div>
       </header>
@@ -369,23 +369,45 @@ const ProjectPage = () => {
               </button>
             </div>
             <div className="space-y-3">
-              {project?.users && project.users.length > 0 ? (
-                project.users.map((u, idx) => {
-                  const isString = typeof u === "string";
-                  const name = isString ? u.slice(0, 6) : u.username || u.email || "Unknown";
-                  const initial = (isString ? name.charAt(0) : u.username?.charAt(0) || "U").toUpperCase();
-                  return (
-                    <div key={idx} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                      <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-semibold text-white">
-                        {initial}
+              {project?.owner ? (
+                <>
+                  {(() => {
+                    const o = project.owner;
+                    const isString = typeof o === "string";
+                    const name = isString ? o.slice(0, 6) : o.username || o.email || "Unknown";
+                    const initial = (isString ? name.charAt(0) : o.username?.charAt(0) || "U").toUpperCase();
+                    return (
+                      <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-semibold text-white">
+                          {initial}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-white text-sm">
+                            {isString ? name : o.username || o.email}{" "}
+                            <span className="text-purple-400 text-xs">(Owner)</span>
+                          </div>
+                          {!isString && o.email && <div className="text-gray-400 text-xs">{o.email}</div>}
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-white text-sm">{isString ? name : u.username || u.email}</div>
-                        {!isString && u.email && <div className="text-gray-400 text-xs">{u.email}</div>}
+                    );
+                  })()}
+                  {project?.collaborators?.map((u, idx) => {
+                    const isString = typeof u === "string";
+                    const name = isString ? u.slice(0, 6) : u.username || u.email || "Unknown";
+                    const initial = (isString ? name.charAt(0) : u.username?.charAt(0) || "U").toUpperCase();
+                    return (
+                      <div key={idx} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-semibold text-white">
+                          {initial}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-white text-sm">{isString ? name : u.username || u.email}</div>
+                          {!isString && u.email && <div className="text-gray-400 text-xs">{u.email}</div>}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                </>
               ) : (
                 <p className="text-gray-400 text-sm text-center">No collaborators yet.</p>
               )}

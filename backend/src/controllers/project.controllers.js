@@ -41,13 +41,14 @@ export const getAllProjectsController = async (req, res) => {
             email: req.user.email
         })
 
-        const allUserProjects = await getAllProjectsService({
+        const { ownedProjects, collaboratingProjects } = await getAllProjectsService({
             userId: loggedInUser._id
         })
         
         return res.status(200).json({
             success: true,
-            projects: allUserProjects
+            ownedProjects,
+            collaboratingProjects
         })
         
     } catch (error) {

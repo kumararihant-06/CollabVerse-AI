@@ -65,7 +65,7 @@ export const FileSystemContextProvider = ({children}) => {
     };
 
     return (
-        <FileSystemContext.Provider values={{
+        <FileSystemContext.Provider value={{
             files,
             activeFile,
             setActiveFile,

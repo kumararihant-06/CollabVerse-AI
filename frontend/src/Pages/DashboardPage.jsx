@@ -10,27 +10,27 @@ export default function DashboardPage() {
     const {user,loading} = useContext(UserContext);
     const navigate = useNavigate();
     const [greeting, setGreeting] = useState("");
-    const [projects, setProjects] = useState([]);
+    const [ownedProjects, setOwnedProjects] = useState([]);
+    const [collaboratingProjects, setCollaboratingProjects] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const handleCreateProject = async (projectName) => {
         try {
-            const token = localStorage.getItem("token");
         const newProject = await axios.post("/project/create", 
             {projectName: projectName}
         )
-        setProjects((prev) => [...prev, newProject.data.project]);
+        setOwnedProjects((prev) => [...prev, newProject.data.project]);
         } catch (error) {
             console.log("Error creating project: ", error.response?.data || error.message )
-            alert("Failed to create project. Please try again.")
+            alert(error.response?.data?.message || "Failed to create project. Please try again.")
         }
     };
 
     const fetchProjects = async () => {
        try {
-         const token = localStorage.getItem("token");
          const response = await axios.get("/project/all-projects")
-         setProjects(response.data.projects);
+         setOwnedProjects(response.data.ownedProjects || []);
+         setCollaboratingProjects(response.data.collaboratingProjects || []);
        } catch (error) {
         console.log("Error fetching projects: ", error.response?.data || error.message)
         alert("Failed to fetch projects. Please refresh the page.")
@@ -39,7 +39,6 @@ export default function DashboardPage() {
     }
 
     const handleProfileClick = async () => {
-        const token = localStorage.getItem("token")
         try {
             await axios.get("/user/profile");
         navigate("/profile");
@@ -89,7 +88,7 @@ export default function DashboardPage() {
 
       </header>
 
-      {/* Projects Section */}
+      {/* Owned Projects Section */}
       <section className="max-w-7.5xl mx-auto mt-12">
 
         <div className="flex items-center justify-between mb-6">
@@ -101,7 +100,7 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {projects.length === 0 ? (
+        {ownedProjects.length === 0 ? (
           <div className="border border-white/10 bg-white/5 backdrop-blur-xl rounded-2xl p-12 text-center">
             <h3 className="text-xl font-semibold mb-2">
               No projects yet
@@ -115,27 +114,52 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
+            {ownedProjects.map((project) => (
               <div
                 onClick={() => {navigate(`/project/${project._id}`)}}
-                key={project.id}
+                key={project._id}
                 className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-6 hover:border-purple-500/40 transition cursor-pointer"
               >
                 <h3 className="text-lg font-semibold mb-1">
                   {project.name}
                 </h3>
                 <p className="text-gray-400 text-sm mb-4">
-                    {project.users?.length || 0} {" "}
-                    {(project.users?.length || 0) === 1 ? "Collaborator" : "Collaborators"}
-                  
+                    {(project.collaborators?.length || 0) + 1} {" "}
+                    {(project.collaborators?.length || 0) === 0 ? "Member" : "Members"}
                 </p>
-                
               </div>
             ))}
           </div>
         )}
 
       </section>
+
+      {/* Collaborating Projects Section */}
+      {collaboratingProjects.length > 0 && (
+        <section className="max-w-7.5xl mx-auto mt-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-semibold">Collaborating Projects</h2>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {collaboratingProjects.map((project) => (
+              <div
+                onClick={() => {navigate(`/project/${project._id}`)}}
+                key={project._id}
+                className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl p-6 hover:border-purple-500/40 transition cursor-pointer"
+              >
+                <h3 className="text-lg font-semibold mb-1">
+                  {project.name}
+                </h3>
+                <p className="text-gray-400 text-sm mb-4">
+                    {(project.collaborators?.length || 0) + 1} {" "}
+                    Members
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <CreateProjectModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
