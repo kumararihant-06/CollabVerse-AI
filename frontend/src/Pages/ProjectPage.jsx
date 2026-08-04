@@ -33,6 +33,9 @@ const ProjectPage = () => {
   // Video call state
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
 
+  // AI thinking state
+  const [isAiThinking, setIsAiThinking] = useState(false);
+
   const messagesEndRef = useRef(null);
 
   // Refs to avoid stale closures in socket handlers
@@ -171,6 +174,15 @@ const ProjectPage = () => {
       );
     });
 
+    // AI: thinking indicator
+    socket.on("ai-thinking", () => {
+      setIsAiThinking(true);
+    });
+
+    socket.on("ai-thinking-end", () => {
+      setIsAiThinking(false);
+    });
+
     // FILE: created
     socket.on("file-created", ({ file, createdBy }) => {
       console.log(`📄 File created: ${file.name} by ${createdBy}`);
@@ -217,6 +229,8 @@ const ProjectPage = () => {
       socket.off("receive-message");
       socket.off("message-edited");
       socket.off("message-deleted");
+      socket.off("ai-thinking");
+      socket.off("ai-thinking-end");
       socket.off("file-created");
       socket.off("file-updated");
       socket.off("file-deleted");
@@ -230,7 +244,7 @@ const ProjectPage = () => {
     fetchProject();
   }, [projectId, user, userLoading]);
 
-  useEffect(() => { scrollToBottom(); }, [messages]);
+  useEffect(() => { scrollToBottom(); }, [messages, isAiThinking]);
 
   if (loading || userLoading) {
     return (
@@ -308,6 +322,14 @@ const ProjectPage = () => {
                   onDelete={handleDeleteMessage}
                 />
               ))}
+              {isAiThinking && (
+                <div className="flex justify-start">
+                  <div className="px-4 py-2 rounded-xl text-sm bg-purple-800/50 text-white/70 italic flex items-center gap-2">
+                    <span className="w-2 h-2 bg-white/60 rounded-full animate-pulse" />
+                    AI is thinking...
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -343,6 +365,7 @@ const ProjectPage = () => {
             <Split direction="vertical" sizes={[70, 30]} minSize={100} gutterSize={8} className="flex flex-col h-full">
               <div className="overflow-hidden">
                 <CodeEditor
+                  key={activeFile}
                   file={getActiveFileObject()}
                   projectId={projectId}
                   setOutput={setOutput}

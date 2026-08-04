@@ -37,24 +37,15 @@ const CodeEditor = ({
     docRef.current = doc;
     monaco.editor.setTheme('vs-dark');
 
-    const provider = new WebsocketProvider(
-      import.meta.env.VITE_YJS_URL,
-      `${projectId}-${file.name}`,
-      doc
-    );
-    providerRef.current = provider;
+  const provider = new WebsocketProvider(
+  import.meta.env.VITE_YJS_URL,
+    `${projectId}::${file.name}`,
+    doc
+  );
+  providerRef.current = provider;
 
-    const ytext = doc.getText('monaco');
-    const binding = new MonacoBinding(ytext, editor.getModel(), new Set(), provider.awareness);
-
-    // Wait for sync before inserting initial content — prevents duplication on refresh
-    provider.once('sync', (isSynced) => {
-      if (isSynced && ytext.toString() === '' && file.content) {
-        ytext.insert(0, file.content);
-      }
-    });
-
-
+  const ytext = doc.getText('monaco');
+  const binding = new MonacoBinding(ytext, editor.getModel(), new Set(), provider.awareness);
 
     // ─── DEBOUNCED AUTOSAVE + notify other users ───
     // Skip changes that originated from the WebSocket provider (remote peers).
@@ -83,13 +74,17 @@ const CodeEditor = ({
     });
   };
 
-  const handleRunCode = async () => {
+const handleRunCode = async () => {
     if (!file) return;
     setIsRunning(true);
     setOutput('Running code...\n');
     try {
+      const liveContent = docRef.current
+        ? docRef.current.getText('monaco').toString()
+        : file.content;
+
       const response = await axios.post('/code/execute', {
-        code: file.content,
+        code: liveContent,
         language: file.language
       });
       if (response.data.success) {
