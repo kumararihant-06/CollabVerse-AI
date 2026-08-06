@@ -27,7 +27,6 @@ const VideoCall = ({ socket, projectId, currentUser, onClose }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
       setLocalStream(stream);
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       return stream;
     } catch (err) {
       console.error("Media error:", err);
@@ -35,6 +34,15 @@ const VideoCall = ({ socket, projectId, currentUser, onClose }) => {
       return null;
     }
   };
+
+  // Re-attach local stream to the <video> element whenever it exists —
+  // handles both initial mount (after isJoined flips true) and re-mount
+  // when toggling video off/on (element is conditionally rendered).
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, isJoined, isVideoOff]);
 
   // ─── Create peer connection ───────────────────────────────────────
   const createPeerConnection = useCallback((targetUserId, targetUsername) => {
@@ -209,7 +217,12 @@ const VideoCall = ({ socket, projectId, currentUser, onClose }) => {
   const RemoteVideo = ({ userId, peer }) => {
     const ref = useRef(null);
     useEffect(() => {
-      if (ref.current && peer.stream) ref.current.srcObject = peer.stream;
+      if (ref.current && peer.stream) {
+        ref.current.srcObject = peer.stream;
+        ref.current.play().catch(err => {
+          console.warn("Remote video/audio autoplay blocked:", err);
+        });
+      }
     }, [peer.stream]);
 
     return (

@@ -32,6 +32,7 @@ const ProjectPage = () => {
 
   // Video call state
   const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
+  const [callParticipants, setCallParticipants] = useState([]);
 
   // AI thinking state
   const [isAiThinking, setIsAiThinking] = useState(false);
@@ -183,6 +184,11 @@ const ProjectPage = () => {
       setIsAiThinking(false);
     });
 
+    // VIDEO CALL: status (who's currently in the call, project-wide)
+    socket.on("call-status-update", ({ participants }) => {
+      setCallParticipants(participants);
+    });
+
     // FILE: created
     socket.on("file-created", ({ file, createdBy }) => {
       console.log(`📄 File created: ${file.name} by ${createdBy}`);
@@ -231,6 +237,7 @@ const ProjectPage = () => {
       socket.off("message-deleted");
       socket.off("ai-thinking");
       socket.off("ai-thinking-end");
+      socket.off("call-status-update");
       socket.off("file-created");
       socket.off("file-updated");
       socket.off("file-deleted");
@@ -279,11 +286,17 @@ const ProjectPage = () => {
           {/* Video Call Button */}
           <button
             onClick={() => setIsVideoCallOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded transition"
-            title="Start video call"
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm text-white rounded transition ${
+              callParticipants.length > 0
+                ? "bg-green-600 hover:bg-green-700 animate-pulse"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
+            title={callParticipants.length > 0 ? "Join ongoing call" : "Start video call"}
           >
             <Video size={16} />
-            <span className="hidden sm:inline">Call</span>
+            <span className="hidden sm:inline">
+              {callParticipants.length > 0 ? `Join Call (${callParticipants.length})` : "Call"}
+            </span>
           </button>
           <button
             onClick={() => setIsInviteModalOpen(true)}

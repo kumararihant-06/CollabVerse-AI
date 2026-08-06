@@ -12,6 +12,23 @@ async function isProjectMember(projectId, userId) {
   return !!project;
 }
 
+// Tracks who's currently in an active video call per project, independent of
+// who has the VideoCall UI open — lets us tell every project viewer whether
+// a call is in progress, not just people already in the call room.
+const activeCalls = new Map(); // projectId -> Map<userId, username>
+
+function getCallParticipants(projectId) {
+  const call = activeCalls.get(projectId);
+  return call ? Array.from(call, ([userId, username]) => ({ userId, username })) : [];
+}
+
+function broadcastCallStatus(io, projectId) {
+  io.to(projectId).emit("call-status-update", {
+    projectId,
+    participants: getCallParticipants(projectId),
+  });
+}
+
 async function handleAiRequest(io, projectId, prompt) {
   io.to(projectId).emit("ai-thinking", { projectId });
 
@@ -81,10 +98,19 @@ export const initializeSocket = (io) => {
       for (const room of socket.rooms) {
         if (room.startsWith('call:')) {
           const projectId = room.replace('call:', '');
+
+          const call = activeCalls.get(projectId);
+          if (call) {
+            call.delete(socket.user.userId);
+            if (call.size === 0) activeCalls.delete(projectId);
+          }
+
           socket.to(room).emit("user-left-call", {
             userId: socket.user.userId,
             username: socket.user.username,
           });
+
+          broadcastCallStatus(io, projectId);
         }
       }
     });
@@ -98,6 +124,12 @@ export const initializeSocket = (io) => {
         }
         socket.join(projectId);
         console.log(`👥 ${socket.user.username} joined project ${projectId}`);
+
+        // Let this newly-joined viewer know immediately if a call is already in progress.
+        socket.emit("call-status-update", {
+          projectId,
+          participants: getCallParticipants(projectId),
+        });
       } catch (err) {
         console.log("Join project error:", err.message);
         socket.emit("error", { message: "Error joining project." });
@@ -255,20 +287,35 @@ export const initializeSocket = (io) => {
     // ─── VIDEO CALL: JOIN ─────────────────────────────────────────────
     socket.on("join-video-call", ({ projectId, username }) => {
       socket.join(`call:${projectId}`);
+
+      if (!activeCalls.has(projectId)) activeCalls.set(projectId, new Map());
+      activeCalls.get(projectId).set(socket.user.userId, username || socket.user.username);
+
       socket.to(`call:${projectId}`).emit("user-joined-call", {
         userId: socket.user.userId,
         username: username || socket.user.username,
       });
+
+      broadcastCallStatus(io, projectId);
       console.log(`📞 ${socket.user.username} joined video call in project ${projectId}`);
     });
 
     // ─── VIDEO CALL: LEAVE ────────────────────────────────────────────
     socket.on("leave-video-call", ({ projectId }) => {
       socket.leave(`call:${projectId}`);
+
+      const call = activeCalls.get(projectId);
+      if (call) {
+        call.delete(socket.user.userId);
+        if (call.size === 0) activeCalls.delete(projectId);
+      }
+
       socket.to(`call:${projectId}`).emit("user-left-call", {
         userId: socket.user.userId,
         username: socket.user.username,
       });
+
+      broadcastCallStatus(io, projectId);
       console.log(`📴 ${socket.user.username} left video call in project ${projectId}`);
     });
 
